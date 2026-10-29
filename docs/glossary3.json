@@ -1,0 +1,21 @@
+{
+  "3D distance": {"sec":"3.1","card":0,"def":"The straight-line distance between two points in three-dimensional space."},
+  "midpoint": {"sec":"3.1","card":0,"def":"The point halfway between two points, found by averaging each corresponding coordinate."},
+  "volume": {"sec":"3.1","card":1,"def":"The amount of three-dimensional space inside a solid, measured in cubic units."},
+  "surface area": {"sec":"3.1","card":1,"def":"The total area of the relevant exposed boundary of a solid."},
+  "angle between a line and a plane": {"sec":"3.1","card":2,"def":"The angle between a line and its perpendicular projection onto a plane."},
+  "sine rule": {"sec":"3.2","card":1,"def":"A triangle relationship equating each side divided by the sine of its opposite angle."},
+  "cosine rule": {"sec":"3.2","card":1,"def":"A triangle relationship connecting three sides and one angle, useful for SSS or SAS data."},
+  "bearing": {"sec":"3.3","card":0,"def":"A direction measured clockwise from north, written using three digits."},
+  "angle of elevation": {"sec":"3.3","card":1,"def":"An angle measured upwards from a horizontal line."},
+  "angle of depression": {"sec":"3.3","card":1,"def":"An angle measured downwards from a horizontal line."},
+  "radian": {"sec":"3.4","card":0,"def":"An angle subtending an arc whose length equals the circle's radius."},
+  "arc length": {"sec":"3.4","card":1,"def":"A distance measured along part of a circle's circumference."},
+  "sector": {"sec":"3.4","card":1,"def":"A region enclosed by two radii of a circle and their connecting arc."},
+  "unit circle": {"sec":"3.5","card":0,"def":"A circle of radius 1 centred at the origin; the point at angle θ is (cos θ, sin θ)."},
+  "ambiguous case": {"sec":"3.5","card":2,"def":"A sine-rule situation where side-side-angle data can allow two different triangles."},
+  "trigonometric identity": {"sec":"3.6","card":0,"def":"An equality between trigonometric expressions that holds for every value in their common domain."},
+  "amplitude": {"sec":"3.7","card":1,"def":"The vertical distance from the midline of a sinusoidal graph to a peak."},
+  "period": {"sec":"3.7","card":1,"def":"The smallest positive horizontal interval after which a periodic function repeats."},
+  "trigonometric equation": {"sec":"3.8","card":0,"def":"An equation involving trigonometric functions, to be solved for angles in a specified domain."}
+}

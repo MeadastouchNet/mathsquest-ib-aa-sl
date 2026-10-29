@@ -1,0 +1,7 @@
+{
+  "name":"mathsquest-ib-aa-sl",
+  "version":"1.0.0",
+  "private":true,
+  "type":"module",
+  "scripts":{"validate":"node scripts/validate_content.mjs .","test":"node scripts/test-maths.mjs"}
+}
