@@ -1,4 +1,4 @@
-const {chromium}=require('C:/Users/jespe/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const fs=require('fs');
 (async()=>{
  const path=require('path');const root=path.resolve(__dirname,'..');
@@ -15,12 +15,12 @@ const fs=require('fs');
  await page.waitForSelector('main h1');
  const content=await page.evaluate(async()=>{const {UNITS}=await import('./js/content/units.js');return UNITS.map(u=>({id:u.id,sections:u.sections.map(s=>({id:s.id,cards:s.cards.length}))}));});
  const results=[];
- for(const width of process.env.INTERACTIONS?[]:[1440,375]){
+ for(const width of process.env.INTERACTIONS?[]:process.env.LIVE_CHECK?[375]:[1440,375]){
   await page.setViewportSize({width,height:1000});
-  for(const theme of ['light','dark']){
+  for(const theme of process.env.LIVE_CHECK?['light']:['light','dark']){
    await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
    const routes=['#/','#/guide','#/settings','#/stats','#/review','#/formulas','#/boss'];
-   for(const u of content){routes.push('#/u/'+u.id,'#/formulas/'+u.id,'#/boss/'+u.id);for(const s of u.sections){for(const step of ['hook','learn','lab','worked','quiz','explain'])routes.push(`#/s/${s.id}/${step}`);for(let c=1;c<s.cards;c++)routes.push(`#/s/${s.id}/learn/${c}`);}}
+   for(const u of content){routes.push('#/u/'+u.id,'#/formulas/'+u.id,'#/boss/'+u.id);for(const s of process.env.LIVE_CHECK?[u.sections[0],u.sections.at(-1)]:u.sections){for(const step of process.env.LIVE_CHECK?['learn','lab','quiz']:['hook','learn','lab','worked','quiz','explain'])routes.push(`#/s/${s.id}/${step}`);if(!process.env.LIVE_CHECK)for(let c=1;c<s.cards;c++)routes.push(`#/s/${s.id}/learn/${c}`);}}
    for(const route of routes){
     await page.evaluate(r=>location.hash=r,route);await page.waitForTimeout(35);
     const bad=await page.evaluate(()=>{
@@ -29,6 +29,7 @@ const fs=require('fs');
      return {empty:t.trim().length<50,raw:/NaN|\[\[|Unknown lab/.test(t),overflow:document.documentElement.scrollWidth>innerWidth+1,tex:el.querySelectorAll('.katex-error').length};
     });
     if(bad.empty||bad.raw||bad.overflow||bad.tex)results.push({width,theme,route,...bad});
+    if(route==='#/formulas'&&!await page.locator('main .katex').count())results.push('KaTeX formula rendering unavailable');
    }
    console.log(`${width}px ${theme}: ${routes.length} routes checked`);
   }

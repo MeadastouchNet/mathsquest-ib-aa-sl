@@ -12,7 +12,7 @@ Progress stays in the browser. Settings exports a progress backup; the planner h
 
 No build or installation needed. Run `python -m http.server 8765` and open http://localhost:8765/.
 
-`npm run validate` checks content; `npm test` checks maths tools and structure. Browser QA uses Playwright; adapt its package path for your machine.
+`npm run validate` checks content; `npm test` checks maths tools and structure. Browser QA uses Playwright and Microsoft Edge. Install Playwright in your development environment or set PLAYWRIGHT_MODULE to its installed module path, then run `node scripts/browser-check.cjs`. Set INTERACTIONS=1 for answer/lab/progress checks; set APP_URL to the live URL and LIVE_CHECK=1 for deployment checks.
 
 | File | Purpose |
 |---|---|

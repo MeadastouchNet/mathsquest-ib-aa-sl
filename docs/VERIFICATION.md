@@ -28,4 +28,4 @@ The auto-checks verify the published answer key and interactions; they do not re
 
 ## Hosting
 
-Public repository: MeadastouchNet/mathsquest-ib-aa-sl. GitHub Pages serves the main branch root; no build or backend is required. Live deployment verification is performed after push.
+Public repository: MeadastouchNet/mathsquest-ib-aa-sl. GitHub Pages serves the main branch root; no build or backend is required. Deployment reported built successfully. The live site passed 52 additional routes at 375 px, including the first and final lesson of every unit, all unit pages/formula sheets/Boss Battles, and global views. KaTeX rendered correctly. No page problems or JavaScript errors were found.
