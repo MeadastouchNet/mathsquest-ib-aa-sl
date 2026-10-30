@@ -9,12 +9,20 @@ const fs=require('fs');
  });
  await new Promise(r=>server.listen(8766,'127.0.0.1',r));
  const browser=await chromium.launch({headless:true,channel:'msedge'});
+ const appUrl=process.env.APP_URL||'http://127.0.0.1:8766/';
+ const results=[];
+ // Signed out, the real Firebase module loads and only the Google sign-in screen shows.
+ const gatePage=await browser.newPage({viewport:{width:375,height:900}});
+ await gatePage.goto(appUrl,{waitUntil:'networkidle'});
+ if(!await gatePage.locator('.gate .btn.google').count())results.push('Google sign-in screen missing when signed out');
+ await gatePage.close();
+ // Everything else runs as a signed-in test user: js/cloud.js is replaced by a stub, so no Google account is used.
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
+ await page.route('**/js/cloud.js',r=>r.fulfill({contentType:'text/javascript',body:"export const onUser=cb=>{cb({uid:'qa-user',displayName:'QA Student',email:'qa@example.test'});return()=>{};};export const signIn=async()=>{};export const signOutUser=async()=>{};export const pull=async()=>null;export const push=async()=>{};"}));
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(process.env.APP_URL||'http://127.0.0.1:8766/',{waitUntil:'networkidle'});
+ await page.goto(appUrl,{waitUntil:'networkidle'});
  await page.waitForSelector('main h1');
  const content=await page.evaluate(async()=>{const {UNITS}=await import('./js/content/units.js');return UNITS.map(u=>({id:u.id,sections:u.sections.map(s=>({id:s.id,cards:s.cards.length}))}));});
- const results=[];
  for(const width of process.env.INTERACTIONS?[]:process.env.LIVE_CHECK?[375]:[1440,375]){
   await page.setViewportSize({width,height:1000});
   for(const theme of process.env.LIVE_CHECK?['light']:['light','dark']){

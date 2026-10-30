@@ -30,15 +30,156 @@ function applyTheme() {
   else document.documentElement.setAttribute('data-theme', t);
 }
 
+// ---------- account: Google sign-in is required, and progress syncs to the user's cloud copy (js/cloud.js) ----------
+let cloud = null;       // the Firebase module; null while loading or if Google can't be reached
+let user = null;        // the signed-in Firebase user
+let canPush = false;    // true once this device has compared its progress with the cloud copy
+let syncState = 'synced', lastSynced = null, pushTimer = 0;
+const accountEl = document.getElementById('account');
+const GOOGLE_G = '<svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+
+async function boot() {
+  applyTheme();
+  try { cloud = await import('./cloud.js'); }
+  catch {
+    // Google can't be reached (offline). Someone who has signed in on this device before keeps going with the
+    // progress saved here; it goes up to the cloud next time the app opens online.
+    if (store.owner()) { user = { uid: store.owner() }; signedIn(); }
+    else gateView('You need an internet connection to sign in the first time.');
+    return;
+  }
+  cloud.onUser(async u => {
+    if (!u) { user = null; canPush = false; renderAccount(); gateView(); return; }
+    gateView(null, true);
+    await startSync(u);
+    user = u;
+    signedIn();
+  });
+}
+function signedIn() {
+  document.body.classList.remove('gated');
+  renderAccount();
+  route();
+}
+
+// Decides whether this device or the cloud has the progress to keep, then keeps the cloud copy up to date.
+async function startSync(u) {
+  let remote;
+  try { remote = await cloud.pull(); }
+  catch (e) {
+    console.warn('Could not read the cloud copy', e);
+    // Offline: carry on with this device's progress if it is this user's, but don't overwrite the cloud copy,
+    // which may be newer. Another user's progress on this device is never shown.
+    if (store.owner() !== u.uid) store.adopt(null);
+    syncState = 'error';
+    return;
+  }
+  const local = store.get(), mine = store.owner() === u.uid, legacy = !store.owner();
+  let keepLocal;
+  if (remote) {
+    // Same user: the newest copy wins. Progress from before sign-in existed: keep it if it has more XP.
+    keepLocal = mine ? (local.updatedAt || 0) > remote.updatedAt
+      : legacy && (local.updatedAt || 0) > 0 && local.xp > (JSON.parse(remote.data).xp || 0);
+  } else {
+    keepLocal = (mine || legacy) && (local.updatedAt || 0) > 0;
+  }
+  if (!keepLocal) store.adopt(remote ? remote.data : null);
+  store.setOwner(u.uid);
+  canPush = true;
+  syncState = 'synced';
+  if (keepLocal) store.save(); // stamps it as the newest copy and pushes it
+}
+store.onSave(() => {
+  if (!canPush) return;
+  setSync('saving');
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushNow, 4000);
+});
+async function pushNow() {
+  clearTimeout(pushTimer);
+  pushTimer = 0;
+  if (!canPush) return;
+  const st = store.get();
+  try {
+    await cloud.push(JSON.stringify(st), st.updatedAt);
+    lastSynced = Date.now();
+    if (!pushTimer) setSync('synced');
+  } catch (e) {
+    console.warn('Could not save the cloud copy', e);
+    setSync('error');
+  }
+}
+// Leaving the tab or closing the app: send the latest changes right away.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && pushTimer) pushNow(); });
+['online', 'offline'].forEach(e => addEventListener(e, renderAccount));
+
+function setSync(s) { syncState = s; renderAccount(); }
+const syncNow = () => !navigator.onLine ? 'offline' : syncState;
+function syncText() {
+  const s = syncNow();
+  if (s === 'offline') return 'Offline. Progress is saved on this device and goes to your Google account when you are back online.';
+  if (s === 'saving') return 'Saving to your Google account…';
+  if (s === 'error') return 'Progress is saved on this device, but could not be saved to your Google account. It tries again after your next change.';
+  return lastSynced ? `Progress saved to your Google account at ${new Date(lastSynced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
+    : 'Progress is saved to your Google account.';
+}
+function avatar(size = 30) {
+  const name = user.displayName || user.email || '?';
+  const initials = name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const style = `width:${size}px;height:${size}px;font-size:${Math.round(size * .4)}px`;
+  return user.photoURL ? h('img', { class: 'avatar', src: user.photoURL, alt: '', referrerpolicy: 'no-referrer', style })
+    : h('span', { class: 'avatar', style }, initials);
+}
+function renderAccount() {
+  accountEl.classList.toggle('hidden', !user);
+  if (!user) return;
+  const s = syncNow();
+  accountEl.title = `${user.displayName || 'Account'} · ${s === 'synced' ? 'progress saved' : s}`;
+  accountEl.replaceChildren(avatar(), h('span', { class: `sync-dot ${s}` }));
+}
+
+function gateView(msg, loading) {
+  document.body.classList.add('gated');
+  const btn = h('button', { class: 'btn big google' }, h('span', { class: 'g-logo', html: GOOGLE_G }), 'Sign in with Google');
+  btn.onclick = async () => {
+    btn.disabled = true;
+    try { await cloud.signIn(); }
+    catch (e) { console.warn(e); toast('Sign-in did not work. Try again.'); }
+    btn.disabled = false;
+  };
+  app.replaceChildren(h('section', { class: 'card gate' },
+    h('span', { class: 'brand-icon' }, icon(APP.icon)),
+    h('h1', {}, APP.name),
+    h('p', { class: 'muted' }, `${APP.course}: short lessons, labs, quizzes and spaced review. Sign in with Google so your progress is saved to your account and follows you to any device.`),
+    loading ? h('p', { class: 'muted' }, 'Loading your progress…') : cloud ? btn : null,
+    msg ? h('p', { class: 'muted small' }, msg) : null));
+}
+
+function accountCard() {
+  const out = cloud ? h('button', { class: 'btn ghost small' }, icon('log-out'), 'Sign out') : null;
+  if (out) out.onclick = async () => {
+    if (pushTimer) await pushNow();
+    canPush = false;
+    await cloud.signOutUser();
+    location.hash = '#/';
+  };
+  return h('div', { class: 'card' },
+    h('div', { class: 'row', style: 'gap:12px' }, avatar(42),
+      h('div', {}, h('b', {}, user.displayName || 'Signed in'), h('div', { class: 'muted small' }, user.email || ''))),
+    h('p', { class: 'muted small', style: 'margin:12px 0' }, syncText()),
+    out);
+}
+
 // ---------- time tracking: counts only while the tab is visible and the learner was active in the last minute ----------
 let lastActive = Date.now();
 ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(e => addEventListener(e, () => { lastActive = Date.now(); }, { passive: true }));
 setInterval(() => {
-  if (document.visibilityState === 'visible' && Date.now() - lastActive < 60000) store.addTime(15000);
+  if (user && document.visibilityState === 'visible' && Date.now() - lastActive < 60000) store.addTime(15000);
 }, 15000);
 
 // ---------- router ----------
 function route() {
+  if (!user) return; // the sign-in screen is showing
   stopSpeaking();
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   const [view, a, b, c] = parts;
@@ -431,6 +572,7 @@ function settingsView() {
   const theme = h('select', {}, ['auto', 'dark', 'light'].map(t => h('option', { value: t, selected: st.theme === t }, t)));
   theme.onchange = () => { store.setSetting('theme', theme.value); applyTheme(); };
   app.replaceChildren(back('#/', 'Home'), h('h1', { style: 'margin-top:6px' }, 'Settings'),
+    accountCard(),
     h('div', { class: 'card' },
       toggle('sound', 'Sound effects'),
       toggle('autoRead', 'Read every card aloud automatically'),
@@ -489,7 +631,7 @@ function statsView() {
   };
 
   app.replaceChildren(back('#/', 'Home'), h('h1', { style: 'margin-top:6px' }, 'Usage stats'),
-    h('p', { class: 'muted' }, 'Progress is stored in this browser on this device only. Use Export to save or share a copy.'),
+    h('p', { class: 'muted' }, 'Progress is saved to your Google account, so it is the same on every device you sign in on. Export saves a copy as a file.'),
     h('div', { class: 'kpis' },
       kpi(`${store.streak()}`, 'day streak'), kpi(`${activeDays}`, 'active days'), kpi(`${totalMin}`, 'minutes total'),
       kpi(`${st.xp}`, `XP · ${store.levelName()}`), kpi(reviewAcc == null ? '–' : pct(reviewAcc, 0), 'review accuracy', reviewAcc == null ? '' : reviewAcc >= 70 ? 'good' : 'warn'),
@@ -505,7 +647,7 @@ function statsView() {
       explains.length ? explains.map(([id, e]) => h('div', { class: 'example plain', style: 'white-space:pre-wrap' }, h('b', {}, `${id} ${findSection(id)?.title || ''}: `), e.text))
         : h('p', { class: 'muted' }, 'None yet.')),
     h('div', { class: 'row' }, exportBtn, h('button', { class: 'btn ghost small', onclick: () => importInput.click() }, 'Import'), importInput,
-      h('button', { class: 'btn ghost small', onclick: () => { if (confirm('Delete all progress on this device?')) { store.reset(); route(); } } }, 'Reset progress')));
+      h('button', { class: 'btn ghost small', onclick: () => { if (confirm('Delete all your progress, on every device? This cannot be undone.')) { store.reset(); route(); } } }, 'Reset progress')));
 }
 const kpi = (v, l, cls = '') => h('div', { class: `kpi ${cls}` }, h('div', { class: 'v' }, v), h('div', { class: 'l' }, l));
 
@@ -522,5 +664,4 @@ addEventListener('resize', () => fitFormulas(app));
 document.title = `${APP.name} · ${APP.course}`;
 document.querySelector('.brand').replaceChildren(h('span', { class: 'brand-icon' }, icon(APP.icon)), APP.name);
 
-applyTheme();
-route();
+boot();

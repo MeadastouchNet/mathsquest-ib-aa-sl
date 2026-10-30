@@ -55,8 +55,8 @@ Suggested check-in after 2 weeks:
 3. **Which formats work?** His ratings per lesson, plus whether he uses read-aloud.
 4. **Exam transfer.** Try one real past Paper 2 question on paper and compare.
 
-Progress is stored in the browser on the device he uses (no account, no server). Use *Export* on the
-Usage stats page to save a copy, or open that page on his device.
+The student signs in with Google, and progress is synced to their account, so the Usage stats page shows the
+same numbers on any device they sign in on. Use *Export* on that page to save a copy as a file.
 
 ## References
 

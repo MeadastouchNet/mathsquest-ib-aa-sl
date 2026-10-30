@@ -1,4 +1,5 @@
-// Progress, XP, spaced repetition and the activity log. Everything lives in localStorage on this device.
+// Progress, XP, spaced repetition and the activity log. localStorage is the working copy on this device;
+// main.js mirrors it to the signed-in user's cloud copy (js/cloud.js) through onSave() and adopt().
 import { APP } from './config.js';
 
 const KEY = APP.storageKey;
@@ -14,18 +15,31 @@ const fresh = () => ({
 });
 
 let state = load();
+const saveListeners = [];
 
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return Object.assign(fresh(), JSON.parse(raw));
+    // Progress saved before sign-in existed has no updatedAt; 1 marks it as "real but older than any cloud copy".
+    if (raw) return Object.assign(fresh(), { updatedAt: 1 }, JSON.parse(raw));
   } catch (e) { /* storage blocked: run in memory */ }
   return fresh();
 }
-export function save() {
+function write() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
 }
+export function save() {
+  state.updatedAt = Date.now();
+  write();
+  saveListeners.forEach(cb => cb());
+}
 export const get = () => state;
+export const onSave = cb => saveListeners.push(cb);
+/** Replaces the progress with a copy from the cloud (or a fresh start for null) without counting it as a change. */
+export function adopt(json) { state = json ? Object.assign(fresh(), JSON.parse(json)) : fresh(); write(); }
+// Which signed-in user the progress on this device belongs to (null = saved before sign-in existed).
+export function owner() { try { return localStorage.getItem(KEY + '.owner'); } catch (e) { return null; } }
+export function setOwner(uid) { try { localStorage.setItem(KEY + '.owner', uid); } catch (e) { /* ignore */ } }
 
 export function today(d = new Date()) {
   const z = n => String(n).padStart(2, '0');

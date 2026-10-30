@@ -85,6 +85,21 @@ main { padding-top: 20px; padding-bottom: 40px; outline: none; }
 .pill { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
 .pill .icon { color: var(--accent); }
 .pill .n { font-family: var(--font-num); font-size: .8rem; }
+.top-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.account { position: relative; display: block; flex: none; border-radius: 50%; }
+.avatar { display: grid; place-items: center; border-radius: 50%; background: var(--yellow); color: var(--on-yellow); font-weight: 700; object-fit: cover; }
+.sync-dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg); background: var(--good); }
+.sync-dot.saving { background: var(--line-strong); }
+.sync-dot.offline, .sync-dot.error { background: var(--bad); }
+/* sign-in screen: the header stats and footer stay hidden until someone is signed in */
+body.gated .top-right, body.gated .footer { display: none; }
+.gate { max-width: 440px; margin: 10vh auto 0; text-align: center; padding: 32px 26px; }
+.gate .brand-icon { width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 10px; }
+.gate .brand-icon .icon { width: 28px; height: 28px; }
+.gate h1 { margin: 0 0 6px; }
+.btn.google { background: var(--card); color: var(--text); border: 1px solid var(--line-strong); box-shadow: none; margin-top: 8px; }
+.btn.google:hover { background: var(--card-2); }
+.g-logo { display: inline-flex; }
 .footer { padding: 24px 16px 40px; color: var(--muted); font-size: .9rem; text-align: center; }
 .footer a { color: var(--muted); text-decoration: none; }
 .footer a:hover { color: var(--text); }

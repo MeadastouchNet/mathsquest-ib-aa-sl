@@ -16,10 +16,13 @@
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body class="gated">
   <header class="topbar">
     <a href="#/" class="brand"><span class="brand-icon" id="brand-icon"></span>MathsQuest</a>
-    <div class="stats" id="stats"></div>
+    <div class="top-right">
+      <div class="stats" id="stats"></div>
+      <a href="#/settings" class="account hidden" id="account" aria-label="Account and sync"></a>
+    </div>
   </header>
   <main id="app" class="container" tabindex="-1"></main>
   <footer class="footer container">
